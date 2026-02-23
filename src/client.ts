@@ -2,9 +2,14 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
+import {
+  getGovernanceProgramVersion,
+  withDepositGoverningTokens,
+} from "@solana/spl-governance";
 import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
+import BN from "bn.js";
 import { decodeClaimStatusAccount, decodeDistributorAccount } from "./accounts";
-import { assertLength32 } from "./bytes";
+import { assertLength32, toBigInt } from "./bytes";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   GRAPE_DISTRIBUTOR_PROGRAM_ID,
@@ -19,6 +24,8 @@ import {
 import { findClaimStatusPda, findDistributorPda, findVaultAuthorityPda } from "./pda";
 import {
   ClaimBuildResult,
+  ClaimAndDepositToRealmBuildResult,
+  ClaimAndDepositToRealmParams,
   ClaimParams,
   ClaimStatusAccount,
   CloseClaimStatusParams,
@@ -147,6 +154,59 @@ export class GrapeDistributorClient {
       vaultAuthority,
       claimantAta,
       claimStatus,
+    };
+  }
+
+  async buildClaimAndDepositToRealmInstructions(
+    params: ClaimAndDepositToRealmParams,
+  ): Promise<ClaimAndDepositToRealmBuildResult> {
+    if (
+      params.governingTokenSource === undefined &&
+      params.governingTokenMint !== undefined &&
+      !params.governingTokenMint.equals(params.mint)
+    ) {
+      throw new Error(
+        "governingTokenMint must match claim mint when using default governingTokenSource",
+      );
+    }
+
+    const claimBuild = await this.buildClaimInstructions(params);
+
+    const governanceProgramVersion =
+      params.governanceProgramVersion ??
+      (await getGovernanceProgramVersion(this.connection, params.governanceProgramId));
+
+    const governingTokenSource = params.governingTokenSource ?? claimBuild.claimantAta;
+    const governingTokenMint = params.governingTokenMint ?? params.mint;
+    const governingTokenOwner = params.governingTokenOwner ?? params.claimant;
+    const governingTokenSourceAuthority =
+      params.governingTokenSourceAuthority ?? params.claimant;
+    const payer = params.payer ?? params.claimant;
+    const depositAmount = params.depositAmount ?? params.amount;
+
+    const governanceInstructions: TransactionInstruction[] = [];
+    const tokenOwnerRecord = await withDepositGoverningTokens(
+      governanceInstructions,
+      params.governanceProgramId,
+      governanceProgramVersion,
+      params.realm,
+      governingTokenSource,
+      governingTokenMint,
+      governingTokenOwner,
+      governingTokenSourceAuthority,
+      payer,
+      new BN(toBigInt(depositAmount).toString()),
+      params.governingTokenOwnerIsSigner,
+    );
+
+    return {
+      instructions: [...claimBuild.instructions, ...governanceInstructions],
+      distributor: claimBuild.distributor,
+      vaultAuthority: claimBuild.vaultAuthority,
+      claimantAta: claimBuild.claimantAta,
+      claimStatus: claimBuild.claimStatus,
+      tokenOwnerRecord,
+      governanceProgramVersion,
     };
   }
 

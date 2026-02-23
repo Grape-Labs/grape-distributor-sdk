@@ -23,6 +23,7 @@ npm install grape-distributor-sdk
   - sorted-pair proof verification
 - Account decoders for `Distributor` and `ClaimStatus`
 - High-level client that builds claim instructions (including idempotent ATA create)
+- Optional claim + SPL Governance deposit flow for realm voting power
 
 ## Basic usage
 
@@ -65,6 +66,33 @@ const { instructions } = await client.buildClaimInstructions({
 
 const tx = new Transaction().add(...instructions);
 ```
+
+## Claim directly into SPL Governance deposit
+
+If the realm’s governing token mint is the same mint you are distributing, you can atomically:
+
+1. claim from distributor to claimant ATA
+2. deposit into the realm’s governing token holding account
+
+```ts
+const { instructions, tokenOwnerRecord } =
+  await client.buildClaimAndDepositToRealmInstructions({
+    claimant,
+    mint,
+    vault,
+    index,
+    amount,
+    proof,
+    realm: new PublicKey("REALM_PUBKEY_HERE"),
+    governanceProgramId: new PublicKey("GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw"),
+  });
+
+const tx = new Transaction().add(...instructions);
+```
+
+Optional:
+- pass `governanceProgramVersion` to skip version lookup RPC
+- pass `depositAmount` if you do not want to deposit the entire claimed amount
 
 ## Close claim status (rent reclaim)
 

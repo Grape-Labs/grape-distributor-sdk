@@ -65,3 +65,21 @@ export interface CloseClaimStatusParams {
   distributor: PublicKey;
   claimStatus?: PublicKey;
 }
+
+export interface ClaimAndDepositToRealmParams extends ClaimParams {
+  realm: PublicKey;
+  governanceProgramId: PublicKey;
+  governanceProgramVersion?: number;
+  governingTokenMint?: PublicKey;
+  governingTokenSource?: PublicKey;
+  governingTokenOwner?: PublicKey;
+  governingTokenSourceAuthority?: PublicKey;
+  payer?: PublicKey;
+  depositAmount?: BigintIsh;
+  governingTokenOwnerIsSigner?: boolean;
+}
+
+export interface ClaimAndDepositToRealmBuildResult extends ClaimBuildResult {
+  tokenOwnerRecord: PublicKey;
+  governanceProgramVersion: number;
+}
