@@ -12,6 +12,7 @@ import {
 } from "./constants";
 import {
   createClaimInstruction,
+  createCloseClaimStatusInstruction,
   createInitializeDistributorInstruction,
   createSetRootInstruction,
 } from "./instructions";
@@ -20,6 +21,7 @@ import {
   ClaimBuildResult,
   ClaimParams,
   ClaimStatusAccount,
+  CloseClaimStatusParams,
   DistributorAccount,
   InitializeDistributorParams,
   SetRootParams,
@@ -146,5 +148,21 @@ export class GrapeDistributorClient {
       claimantAta,
       claimStatus,
     };
+  }
+
+  buildCloseClaimStatusInstruction(
+    params: CloseClaimStatusParams,
+  ): { instruction: TransactionInstruction; claimStatus: PublicKey } {
+    const claimStatus =
+      params.claimStatus ?? this.findClaimStatusPda(params.distributor, params.claimant)[0];
+
+    const instruction = createCloseClaimStatusInstruction({
+      claimant: params.claimant,
+      distributor: params.distributor,
+      claimStatus,
+      programId: this.programId,
+    });
+
+    return { instruction, claimStatus };
   }
 }

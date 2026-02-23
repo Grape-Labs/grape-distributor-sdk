@@ -31,6 +31,7 @@ export const IX_DISCRIMINATORS = {
   initializeDistributor: anchorDiscriminator("global", "initialize_distributor"),
   setRoot: anchorDiscriminator("global", "set_root"),
   claim: anchorDiscriminator("global", "claim"),
+  closeClaimStatus: anchorDiscriminator("global", "close_claim_status"),
 } as const;
 
 export const ACCOUNT_DISCRIMINATORS = {

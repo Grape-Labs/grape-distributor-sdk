@@ -41,6 +41,13 @@ interface ClaimInstructionParams {
   programId?: PublicKey;
 }
 
+interface CloseClaimStatusInstructionParams {
+  claimant: PublicKey;
+  distributor: PublicKey;
+  claimStatus: PublicKey;
+  programId?: PublicKey;
+}
+
 export function createInitializeDistributorInstruction(
   params: InitializeDistributorInstructionParams,
 ): TransactionInstruction {
@@ -110,6 +117,24 @@ export function createClaimInstruction(params: ClaimInstructionParams): Transact
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+  ];
+
+  return new TransactionInstruction({
+    programId: params.programId ?? GRAPE_DISTRIBUTOR_PROGRAM_ID,
+    keys,
+    data,
+  });
+}
+
+export function createCloseClaimStatusInstruction(
+  params: CloseClaimStatusInstructionParams,
+): TransactionInstruction {
+  const data = IX_DISCRIMINATORS.closeClaimStatus;
+
+  const keys: AccountMeta[] = [
+    { pubkey: params.distributor, isSigner: false, isWritable: false },
+    { pubkey: params.claimStatus, isSigner: false, isWritable: true },
+    { pubkey: params.claimant, isSigner: true, isWritable: true },
   ];
 
   return new TransactionInstruction({

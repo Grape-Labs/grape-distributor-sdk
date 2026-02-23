@@ -17,6 +17,7 @@ npm install grape-distributor-sdk
   - `initialize_distributor`
   - `set_root`
   - `claim`
+  - `close_claim_status` (requires program upgrade)
 - Merkle helpers matching on-chain logic:
   - leaf hashing with `LEAF_TAG`
   - sorted-pair proof verification
@@ -63,6 +64,56 @@ const { instructions } = await client.buildClaimInstructions({
 });
 
 const tx = new Transaction().add(...instructions);
+```
+
+## Close claim status (rent reclaim)
+
+`claim_status` rent can only be reclaimed if your on-chain program exposes a close instruction.
+
+SDK usage after that instruction exists:
+
+```ts
+const { instruction: closeIx } = client.buildCloseClaimStatusInstruction({
+  claimant,
+  distributor,
+});
+
+const closeTx = new Transaction().add(closeIx);
+```
+
+Suggested Anchor instruction to add on-chain:
+
+```rust
+pub fn close_claim_status(ctx: Context<CloseClaimStatus>) -> Result<()> {
+    let distributor = &ctx.accounts.distributor;
+
+    require!(distributor.end_ts != 0, DistributorError::NoEndTimestamp);
+    let now = Clock::get()?.unix_timestamp;
+    require!(now > distributor.end_ts, DistributorError::NotEndedYet);
+    require!(ctx.accounts.claim_status.claimed, DistributorError::NotClaimed);
+
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct CloseClaimStatus<'info> {
+    #[account(
+        seeds = [b"distributor", distributor.mint.as_ref()],
+        bump = distributor.bump
+    )]
+    pub distributor: Account<'info, Distributor>,
+
+    #[account(
+        mut,
+        seeds = [b"claim", distributor.key().as_ref(), claimant.key().as_ref()],
+        bump = claim_status.bump,
+        close = claimant
+    )]
+    pub claim_status: Account<'info, ClaimStatus>,
+
+    #[account(mut)]
+    pub claimant: Signer<'info>,
+}
 ```
 
 ## Notes

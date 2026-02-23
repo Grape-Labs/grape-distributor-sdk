@@ -59,3 +59,9 @@ export interface ClaimBuildResult {
   claimantAta: PublicKey;
   claimStatus: PublicKey;
 }
+
+export interface CloseClaimStatusParams {
+  claimant: PublicKey;
+  distributor: PublicKey;
+  claimStatus?: PublicKey;
+}
