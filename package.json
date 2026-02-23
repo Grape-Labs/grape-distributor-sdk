@@ -1,0 +1,31 @@
+{
+  "name": "grape-distributor-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Grape Merkle Distributor Solana program.",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "solana",
+    "anchor",
+    "merkle",
+    "airdrop",
+    "sdk"
+  ],
+  "dependencies": {
+    "@noble/hashes": "^1.6.1",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.98.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
