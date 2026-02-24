@@ -117,12 +117,26 @@ SDK usage after that instruction exists:
 const { instruction: closeIx } = client.buildCloseClaimStatusInstruction({
   claimant,
   distributor,
+  index,
 });
 
 const closeTx = new Transaction().add(closeIx);
 ```
 
+If you already computed the PDA externally, you can pass `claimStatus` directly instead of `index`.
+
+## Allocation indexing
+
+For the updated program, `claim_status` is derived with:
+
+- `distributor`
+- `claimant`
+- `index` (u64 little-endian)
+
+This means each wallet must use a unique `index` for each distribution round.  
+Do not reuse the same `(claimant, index)` pair across rounds, or claims will collide on the same PDA.
+
 ## Notes
 
-- `claim_status` PDA is derived by `(distributor, claimant)` and only allows one successful claim per claimant.
+- `claim_status` PDA is derived by `(distributor, claimant, index)`.
 - All roots/proof nodes must be exactly 32 bytes.

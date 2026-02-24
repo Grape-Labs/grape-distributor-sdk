@@ -9,7 +9,7 @@ import {
 import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import BN from "bn.js";
 import { decodeClaimStatusAccount, decodeDistributorAccount } from "./accounts";
-import { assertLength32, toBigInt } from "./bytes";
+import { assertLength32, BigintIsh, toBigInt } from "./bytes";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   GRAPE_DISTRIBUTOR_PROGRAM_ID,
@@ -53,8 +53,12 @@ export class GrapeDistributorClient {
     return findVaultAuthorityPda(distributor, this.programId);
   }
 
-  findClaimStatusPda(distributor: PublicKey, claimant: PublicKey): [PublicKey, number] {
-    return findClaimStatusPda(distributor, claimant, this.programId);
+  findClaimStatusPda(
+    distributor: PublicKey,
+    claimant: PublicKey,
+    index: BigintIsh,
+  ): [PublicKey, number] {
+    return findClaimStatusPda(distributor, claimant, index, this.programId);
   }
 
   async fetchDistributor(distributor: PublicKey): Promise<DistributorAccount | null> {
@@ -115,7 +119,8 @@ export class GrapeDistributorClient {
   async buildClaimInstructions(params: ClaimParams): Promise<ClaimBuildResult> {
     const distributor = params.distributor ?? this.findDistributorPda(params.mint)[0];
     const vaultAuthority = params.vaultAuthority ?? this.findVaultAuthorityPda(distributor)[0];
-    const claimStatus = params.claimStatus ?? this.findClaimStatusPda(distributor, params.claimant)[0];
+    const claimStatus =
+      params.claimStatus ?? this.findClaimStatusPda(distributor, params.claimant, params.index)[0];
 
     const claimantAta =
       params.claimantAta ??
@@ -215,8 +220,13 @@ export class GrapeDistributorClient {
   buildCloseClaimStatusInstruction(
     params: CloseClaimStatusParams,
   ): { instruction: TransactionInstruction; claimStatus: PublicKey } {
-    const claimStatus =
-      params.claimStatus ?? this.findClaimStatusPda(params.distributor, params.claimant)[0];
+    let claimStatus = params.claimStatus;
+    if (!claimStatus) {
+      if (params.index === undefined) {
+        throw new Error("index is required when claimStatus is not provided");
+      }
+      claimStatus = this.findClaimStatusPda(params.distributor, params.claimant, params.index)[0];
+    }
 
     const instruction = createCloseClaimStatusInstruction({
       claimant: params.claimant,

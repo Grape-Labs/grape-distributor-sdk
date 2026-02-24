@@ -63,6 +63,7 @@ export interface ClaimBuildResult {
 export interface CloseClaimStatusParams {
   claimant: PublicKey;
   distributor: PublicKey;
+  index?: BigintIsh;
   claimStatus?: PublicKey;
 }
 
