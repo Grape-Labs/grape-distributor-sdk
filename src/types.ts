@@ -66,6 +66,19 @@ export interface CloseClaimStatusParams {
   claimStatus?: PublicKey;
 }
 
+export interface ClawbackParams {
+  authority: PublicKey;
+  mint: PublicKey;
+  distributor: PublicKey;
+  vault: PublicKey;
+  amount: BigintIsh;
+  vaultAuthority?: PublicKey;
+  authorityAta?: PublicKey;
+}
+
+/** @deprecated Use ClawbackParams */
+export type ClawbackVaultTokensParams = ClawbackParams;
+
 export interface ClaimAndDepositToRealmParams extends ClaimParams {
   realm: PublicKey;
   governanceProgramId: PublicKey;

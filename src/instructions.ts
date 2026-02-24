@@ -48,6 +48,17 @@ interface CloseClaimStatusInstructionParams {
   programId?: PublicKey;
 }
 
+interface ClawbackInstructionParams {
+  authority: PublicKey;
+  mint: PublicKey;
+  distributor: PublicKey;
+  vault: PublicKey;
+  vaultAuthority: PublicKey;
+  authorityAta: PublicKey;
+  amount: BigintIsh;
+  programId?: PublicKey;
+}
+
 export function createInitializeDistributorInstruction(
   params: InitializeDistributorInstructionParams,
 ): TransactionInstruction {
@@ -135,6 +146,35 @@ export function createCloseClaimStatusInstruction(
     { pubkey: params.distributor, isSigner: false, isWritable: false },
     { pubkey: params.claimStatus, isSigner: false, isWritable: true },
     { pubkey: params.claimant, isSigner: true, isWritable: true },
+  ];
+
+  return new TransactionInstruction({
+    programId: params.programId ?? GRAPE_DISTRIBUTOR_PROGRAM_ID,
+    keys,
+    data,
+  });
+}
+
+export function createClawbackInstruction(
+  params: ClawbackInstructionParams,
+): TransactionInstruction {
+  const data = Buffer.from(
+    concatBytes([
+      IX_DISCRIMINATORS.clawback,
+      u64ToLe(params.amount),
+    ]),
+  );
+
+  const keys: AccountMeta[] = [
+    { pubkey: params.distributor, isSigner: false, isWritable: true },
+    { pubkey: params.vault, isSigner: false, isWritable: true },
+    { pubkey: params.vaultAuthority, isSigner: false, isWritable: false },
+    { pubkey: params.authority, isSigner: true, isWritable: true },
+    { pubkey: params.authorityAta, isSigner: false, isWritable: true },
+    { pubkey: params.mint, isSigner: false, isWritable: false },
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
 
   return new TransactionInstruction({

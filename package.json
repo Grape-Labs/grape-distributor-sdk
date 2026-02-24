@@ -1,6 +1,6 @@
 {
   "name": "grape-distributor-sdk",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "TypeScript SDK for the Grape Merkle Distributor Solana program.",
   "license": "MIT",
   "main": "dist/index.js",

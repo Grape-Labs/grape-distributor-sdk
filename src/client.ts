@@ -17,6 +17,7 @@ import {
 } from "./constants";
 import {
   createClaimInstruction,
+  createClawbackInstruction,
   createCloseClaimStatusInstruction,
   createInitializeDistributorInstruction,
   createSetRootInstruction,
@@ -28,6 +29,7 @@ import {
   ClaimAndDepositToRealmParams,
   ClaimParams,
   ClaimStatusAccount,
+  ClawbackParams,
   CloseClaimStatusParams,
   DistributorAccount,
   InitializeDistributorParams,
@@ -224,5 +226,42 @@ export class GrapeDistributorClient {
     });
 
     return { instruction, claimStatus };
+  }
+
+  buildClawbackInstruction(
+    params: ClawbackParams,
+  ): { instruction: TransactionInstruction; vaultAuthority: PublicKey; authorityAta: PublicKey } {
+    const vaultAuthority =
+      params.vaultAuthority ?? this.findVaultAuthorityPda(params.distributor)[0];
+
+    const authorityAta =
+      params.authorityAta ??
+      getAssociatedTokenAddressSync(
+        params.mint,
+        params.authority,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+      );
+
+    const instruction = createClawbackInstruction({
+      authority: params.authority,
+      mint: params.mint,
+      distributor: params.distributor,
+      vault: params.vault,
+      vaultAuthority,
+      authorityAta,
+      amount: params.amount,
+      programId: this.programId,
+    });
+
+    return { instruction, vaultAuthority, authorityAta };
+  }
+
+  /** @deprecated Use buildClawbackInstruction */
+  buildClawbackVaultTokensInstruction(
+    params: ClawbackParams,
+  ): { instruction: TransactionInstruction; vaultAuthority: PublicKey; authorityAta: PublicKey } {
+    return this.buildClawbackInstruction(params);
   }
 }

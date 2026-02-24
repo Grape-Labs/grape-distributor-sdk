@@ -18,6 +18,7 @@ npm install grape-distributor-sdk
   - `set_root`
   - `claim`
   - `close_claim_status` (requires program upgrade)
+  - `clawback`
 - Merkle helpers matching on-chain logic:
   - leaf hashing with `LEAF_TAG`
   - sorted-pair proof verification
@@ -93,6 +94,88 @@ const tx = new Transaction().add(...instructions);
 Optional:
 - pass `governanceProgramVersion` to skip version lookup RPC
 - pass `depositAmount` if you do not want to deposit the entire claimed amount
+
+## Claw back unclaimed vault tokens
+
+```ts
+const { instruction: clawbackIx } = client.buildClawbackInstruction({
+  authority,
+  mint,
+  distributor,
+  vault,
+  amount: 5_000_000n,
+});
+```
+
+This matches the current on-chain `clawback(ctx, amount)` instruction.
+
+```rust
+pub fn clawback(ctx: Context<Clawback>, amount: u64) -> Result<()> {
+    let distributor = &ctx.accounts.distributor;
+    let distributor_key = distributor.key();
+    let signer_seeds: &[&[u8]] = &[
+        b"vault_authority",
+        distributor_key.as_ref(),
+        &[distributor.vault_authority_bump],
+    ];
+    let signer_seeds_arr: [&[&[u8]]; 1] = [signer_seeds];
+
+    let cpi_accounts = Transfer {
+        from: ctx.accounts.vault.to_account_info(),
+        to: ctx.accounts.authority_ata.to_account_info(),
+        authority: ctx.accounts.vault_authority.to_account_info(),
+    };
+
+    let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts)
+        .with_signer(&signer_seeds_arr);
+
+    token::transfer(cpi_ctx, amount)?;
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct Clawback<'info> {
+    #[account(
+        mut,
+        seeds = [b"distributor", distributor.mint.as_ref()],
+        bump = distributor.bump,
+        has_one = authority @ DistributorError::Unauthorized
+    )]
+    pub distributor: Account<'info, Distributor>,
+
+    #[account(
+        mut,
+        address = distributor.vault @ DistributorError::WrongVault,
+        constraint = vault.mint == distributor.mint @ DistributorError::WrongMint,
+        constraint = vault.owner == vault_authority.key() @ DistributorError::WrongVaultAuthority
+    )]
+    pub vault: Account<'info, TokenAccount>,
+
+    #[account(
+        seeds = [b"vault_authority", distributor.key().as_ref()],
+        bump = distributor.vault_authority_bump
+    )]
+    /// CHECK: PDA signer only
+    pub vault_authority: UncheckedAccount<'info>,
+
+    pub authority: Signer<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        associated_token::mint = mint,
+        associated_token::authority = authority
+    )]
+    pub authority_ata: Account<'info, TokenAccount>,
+
+    #[account(address = distributor.mint @ DistributorError::WrongMint)]
+    pub mint: Account<'info, Mint>,
+
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+```
 
 ## Close claim status (rent reclaim)
 
